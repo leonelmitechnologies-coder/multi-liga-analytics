@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acerca de — Multi-Liga Analytics</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f7fa;color:#1a202c;line-height:1.7}
+.hero{background:linear-gradient(135deg,#38a169,#2f855a);color:#fff;padding:60px 24px;text-align:center}
+.hero h1{font-size:36px;font-weight:800;margin-bottom:8px}
+.hero p{font-size:18px;opacity:.9;max-width:600px;margin:0 auto}
+.container{max-width:900px;margin:0 auto;padding:32px 24px}
+h2{font-size:22px;font-weight:700;margin:32px 0 16px;display:flex;align-items:center;gap:10px}
+h2 span{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px}
+.stat{text-align:center;padding:20px}
+.stat-val{font-size:36px;font-weight:800;color:#38a169}
+.stat-label{font-size:13px;color:#718096;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:10px 12px;background:#f7fafc;color:#718096;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0}
+td{padding:10px 12px;border-bottom:1px solid #e2e8f0}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.bg{background:#0d9f5f15;color:#0d9f5f}.br{background:#e53e3e12;color:#e53e3e}.bb{background:#3182ce12;color:#3182ce}.by{background:#d69e2e12;color:#d69e2e}.bp{background:#805ad515;color:#805ad5}
+ul{padding-left:20px;margin:8px 0}
+li{margin:4px 0;font-size:15px}
+.footer{text-align:center;padding:40px 24px;color:#a0aec0;font-size:13px;border-top:1px solid #e2e8f0;margin-top:40px}
+a{color:#3182ce;text-decoration:none}a:hover{text-decoration:underline}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0;font-size:14px}
+.flow-step{background:#fff;border:1px solid #e2e8f0;padding:8px 16px;border-radius:8px;font-weight:600}
+.flow-arrow{color:#a0aec0;font-size:18px}
+@media(max-width:600px){.hero h1{font-size:26px}.hero p{font-size:15px}.stat-val{font-size:28px}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+<h1>Multi-Liga Analytics</h1>
+<p>Plataforma de análisis estadístico y predicciones de fútbol basada en datos reales</p>
+</div>
+
+<div class="container">
+
+<div class="grid">
+<div class="card stat"><div class="stat-val">6</div><div class="stat-label">Ligas Cubiertas</div></div>
+<div class="card stat"><div class="stat-val">132</div><div class="stat-label">Equipos</div></div>
+<div class="card stat"><div class="stat-val">3,000+</div><div class="stat-label">Partidos Analizados</div></div>
+<div class="card stat"><div class="stat-val">12</div><div class="stat-label">Métricas por Partido</div></div>
+</div>
+
+<h2><span style="background:#0d9f5f15;color:#0d9f5f">⚽</span> ¿Qué es?</h2>
+<div class="card">
+<p>Multi-Liga Analytics es una herramienta que analiza partidos de fútbol usando <strong>modelos estadísticos</strong> (distribución de Poisson y Normal CDF) alimentados con <strong>datos reales</strong> de ESPN. Genera predicciones para cualquier enfrentamiento: marcadores, goles, tarjetas, corners y más.</p>
+</div>
+
+<h2><span style="background:#3182ce12;color:#3182ce">🌍</span> Ligas Disponibles</h2>
+<div class="card">
+<table>
+<thead><tr><th>Liga</th><th>País</th><th>Equipos</th><th>Temporada</th></tr></thead>
+<tbody>
+<tr><td><strong>Liga MX</strong></td><td>🇲🇽 México</td><td>18</td><td>Clausura 2025</td></tr>
+<tr><td><strong>Premier League</strong></td><td>🏴 Inglaterra</td><td>20</td><td>2024-25</td></tr>
+<tr><td><strong>La Liga</strong></td><td>🇪🇸 España</td><td>20</td><td>2024-25</td></tr>
+<tr><td><strong>Serie A</strong></td><td>🇮🇹 Italia</td><td>20</td><td>2024-25</td></tr>
+<tr><td><strong>Bundesliga</strong></td><td>🇩🇪 Alemania</td><td>18</td><td>2024-25</td></tr>
+<tr><td><strong>Champions League</strong></td><td>🏆 UEFA</td><td>36</td><td>2024-25</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2><span style="background:#805ad515;color:#805ad5">🧠</span> Motor de Predicción</h2>
+<div class="card">
+<p>Cada predicción combina <strong>6 señales ponderadas</strong>:</p>
+<table>
+<thead><tr><th>Señal</th><th>Peso</th><th>Descripción</th></tr></thead>
+<tbody>
+<tr><td>Temporada completa</td><td><span class="badge bg">30%</span></td><td>Promedios generales del equipo en la temporada</td></tr>
+<tr><td>Local / Visitante</td><td><span class="badge bb">25%</span></td><td>Rendimiento específico jugando en casa o fuera</td></tr>
+<tr><td>Forma reciente</td><td><span class="badge bp">20%</span></td><td>Últimos 5 partidos del equipo</td></tr>
+<tr><td>H2H</td><td><span class="badge by">10%</span></td><td>Historial de enfrentamientos directos</td></tr>
+<tr><td>Árbitro</td><td><span class="badge by">10%</span></td><td>Promedio de tarjetas/faltas de la liga</td></tr>
+<tr><td>Promedio liga</td><td><span class="badge bg">5%</span></td><td>Media general como referencia base</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2><span style="background:#d69e2e12;color:#d69e2e">📊</span> ¿Qué Predice?</h2>
+<div class="card">
+<table>
+<thead><tr><th>Predicción</th><th>Método</th><th>Qué Muestra</th></tr></thead>
+<tbody>
+<tr><td><strong>Primer Gol</strong></td><td>Distribución Exponencial</td><td>Minuto estimado, rango probable, P(gol en 1T vs 2T), P(0-0 al descanso)</td></tr>
+<tr><td><strong>Marcador Final</strong></td><td>Poisson</td><td>Top 3 marcadores más probables con porcentaje</td></tr>
+<tr><td><strong>Goles por Equipo</strong></td><td>Poisson (λ ponderado)</td><td>Goles esperados para local y visitante</td></tr>
+<tr><td><strong>BTTS</strong></td><td>Matriz Poisson</td><td>Probabilidad de que ambos equipos anoten</td></tr>
+<tr><td><strong>Marcador 1T / 2T</strong></td><td>Poisson (λ ajustado)</td><td>Top 3 marcadores por tiempo, P(gol en cada mitad)</td></tr>
+<tr><td><strong>1X2</strong></td><td>Matriz Poisson</td><td>Probabilidad de victoria local, empate o visitante</td></tr>
+<tr><td><strong>Over/Under Goles</strong></td><td>Poisson</td><td>Líneas 1.5, 2.5, 3.5</td></tr>
+<tr><td><strong>Over/Under Tarjetas</strong></td><td>Normal CDF</td><td>Líneas 3.5, 4.5, 5.5</td></tr>
+<tr><td><strong>Over/Under Corners</strong></td><td>Normal CDF</td><td>Líneas 8.5, 10.5, 12.5</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2><span style="background:#e53e3e12;color:#e53e3e">📈</span> Secciones del Análisis</h2>
+<div class="card">
+<ul>
+<li><strong>Match Predictor</strong> — 6 tarjetas con las predicciones principales</li>
+<li><strong>Probabilidad de Resultado</strong> — Barra 1X2 con forma reciente</li>
+<li><strong>Comparativa Estadística</strong> — Barras cara a cara (temporada, últimos 5, H2H)</li>
+<li><strong>Over/Under</strong> — Goles, tarjetas y corners con nivel de confianza</li>
+<li><strong>Árbitro + Tarjetas/Corners</strong> — Predicción detallada de disciplina</li>
+<li><strong>Tarjetas por Jornada</strong> — Gráfico de barras por jornada</li>
+<li><strong>Historial H2H</strong> — Últimos 8 enfrentamientos directos</li>
+<li><strong>Tabla de Posiciones</strong> — EN VIVO desde ESPN con zonas de clasificación</li>
+<li><strong>Ranking de Tarjetas</strong> — Top 8 equipos más amonestados</li>
+<li><strong>Insights</strong> — Conclusiones automáticas del análisis</li>
+</ul>
+</div>
+
+<h2><span style="background:#0d9f5f15;color:#0d9f5f">🔄</span> Pipeline de Datos</h2>
+<div class="card">
+<div class="flow">
+<div class="flow-step">footballcsv (GitHub)</div>
+<div class="flow-arrow">→</div>
+<div class="flow-step">ESPN API</div>
+<div class="flow-arrow">→</div>
+<div class="flow-step">Scraper Node.js</div>
+<div class="flow-arrow">→</div>
+<div class="flow-step">Archivos JS</div>
+<div class="flow-arrow">→</div>
+<div class="flow-step">Motor de Análisis</div>
+</div>
+<ul>
+<li><strong>footballcsv</strong> — Resultados históricos de Liga MX (CSV de GitHub)</li>
+<li><strong>ESPN API</strong> — Partidos recientes + estadísticas detalladas (posesión, tiros, corners, tarjetas, faltas, offsides, atajadas)</li>
+<li><strong>Scraper</strong> — Combina fuentes, deduplica, enriquece y genera archivos de datos</li>
+<li><strong>Actualización automática</strong> — Task Scheduler de Windows ejecuta el scraper diariamente a las 6:00 AM</li>
+<li><strong>Standings EN VIVO</strong> — La tabla de posiciones se consulta directamente a ESPN cada vez que se abre la página</li>
+</ul>
+</div>
+
+<h2><span style="background:#3182ce12;color:#3182ce">📐</span> Modelos Matemáticos</h2>
+<div class="card">
+<p><strong>Distribución de Poisson</strong> — Modela la probabilidad de que ocurran <em>k</em> goles dado un promedio λ. Se genera una matriz 7×7 (0-6 goles por equipo) para calcular todas las probabilidades de marcador.</p>
+<p style="margin-top:12px"><strong>Normal CDF (función de distribución acumulada)</strong> — Para métricas como tarjetas y corners, calcula P(X > línea) usando la media ponderada y desviación estándar.</p>
+<p style="margin-top:12px"><strong>Distribución Exponencial</strong> — Estima el minuto del primer gol basándose en la tasa combinada de gol por minuto, ajustada por presión ofensiva (tiros a puerta) y solidez defensiva (clean sheets).</p>
+</div>
+
+<h2><span style="background:#d69e2e12;color:#d69e2e">⚙️</span> Tecnología</h2>
+<div class="card">
+<table>
+<thead><tr><th>Componente</th><th>Tecnología</th></tr></thead>
+<tbody>
+<tr><td>Frontend</td><td>HTML + CSS + JavaScript vanilla (sin frameworks)</td></tr>
+<tr><td>Scraper</td><td>Node.js v24 + cheerio + csv-parse</td></tr>
+<tr><td>Fuentes de datos</td><td>ESPN API + footballcsv (GitHub)</td></tr>
+<tr><td>Actualización</td><td>Windows Task Scheduler (diario 6:00 AM)</td></tr>
+<tr><td>Logos</td><td>ESPN CDN (cargados en tiempo real)</td></tr>
+</tbody>
+</table>
+</div>
+
+</div>
+
+<div class="footer">
+<p>Multi-Liga Analytics &copy; 2026 &mdash; Análisis estadístico de fútbol</p>
+<p style="margin-top:4px">Las predicciones son estimaciones matemáticas basadas en rendimiento pasado. No garantizan resultados.</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "multi-league-scraper",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "update": "node index.js",
+    "update:all": "node index.js --league all",
+    "update:liga-mx": "node index.js --league liga-mx",
+    "update:la-liga": "node index.js --league la-liga",
+    "update:premier": "node index.js --league premier-league",
+    "update:serie-a": "node index.js --league serie-a",
+    "update:bundesliga": "node index.js --league bundesliga",
+    "update:champions-league": "node index.js --league champions-league",
+    "update:historical": "node index.js --skip-espn",
+    "discover-teams": "node discover-teams.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "csv-parse": "^5.5.0"
+  }
+}
