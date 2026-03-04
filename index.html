@@ -153,6 +153,35 @@ tbody td{padding:12px 16px;font-size:14px;border-bottom:1px solid var(--brd)}tbo
 #updateIndicator .update-spinner{width:16px;height:16px;border:2px solid var(--brd);border-top-color:var(--ag);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #updateIndicator.toast-success{background:var(--agd);border-color:var(--ag);color:var(--ag)}
+.pat-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center}
+.pat-overlay.visible{display:flex}
+.pat-modal{background:var(--bg-s);border:1px solid var(--brd);border-radius:var(--r);padding:28px 32px;width:400px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.pat-modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--tp)}
+.pat-modal label{display:block;font-size:13px;font-weight:600;color:var(--ts);margin-bottom:6px}
+.pat-modal input{width:100%;padding:10px 14px;background:var(--bg-p);border:2px solid var(--brd);border-radius:var(--rs);color:var(--tp);font-size:14px;font-family:monospace;margin-bottom:12px;transition:.2s}
+.pat-modal input:focus{outline:none;border-color:var(--ag)}
+.pat-modal .pat-hint{font-size:12px;color:var(--tm);margin-bottom:20px;line-height:1.5}
+.pat-modal .pat-hint a{color:var(--ab);text-decoration:none}
+.pat-modal .pat-hint a:hover{text-decoration:underline}
+.pat-modal .pat-actions{display:flex;gap:10px;justify-content:flex-end}
+.pat-modal .pat-actions button{padding:9px 22px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--brd);transition:.2s}
+.pat-modal .btn-pat-save{background:var(--gg);color:#fff;border:none}
+.pat-modal .btn-pat-save:hover{box-shadow:0 4px 12px rgba(13,159,95,.3)}
+.pat-modal .btn-pat-save:disabled{opacity:.5;cursor:not-allowed}
+.pat-modal .btn-pat-cancel{background:var(--bg-ch);color:var(--ts)}
+.pat-modal .btn-pat-cancel:hover{background:var(--bg-t)}
+.pat-modal .btn-pat-clear{background:none;border:1px solid var(--ar);color:var(--ar);font-size:12px;padding:6px 14px}
+.pat-modal .btn-pat-clear:hover{background:var(--ard)}
+.live-fetch-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;display:none;align-items:center;justify-content:center}
+.live-fetch-overlay.visible{display:flex}
+.live-fetch-modal{background:var(--bg-s);border:1px solid var(--brd);border-radius:var(--r);padding:32px;width:420px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.2);text-align:center}
+.live-fetch-title{font-size:16px;font-weight:700;color:var(--tp);margin-bottom:12px}
+.live-fetch-message{font-size:13px;color:var(--ts);margin-bottom:16px;min-height:20px}
+.live-fetch-progress{height:8px;background:var(--bg-t);border-radius:4px;overflow:hidden;margin-bottom:8px}
+.live-fetch-bar{height:100%;width:0%;background:var(--gg);border-radius:4px;transition:width .3s}
+.live-fetch-pct{font-size:12px;font-weight:600;color:var(--ag);margin-bottom:16px}
+.live-fetch-skip{padding:8px 20px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--brd);background:var(--bg-ch);color:var(--ts);transition:.2s}
+.live-fetch-skip:hover{background:var(--bg-t)}
 </style>
 </head>
 <body>
@@ -201,6 +230,33 @@ tbody td{padding:12px 16px;font-size:14px;border-bottom:1px solid var(--brd)}tbo
 
 <div id="updateIndicator"><div class="update-spinner"></div><span id="updateText">Actualizando datos...</span></div>
 
+<div class="pat-overlay" id="patOverlay">
+<div class="pat-modal">
+<h3>Configurar Actualización</h3>
+<label for="patInput">GitHub Token (PAT):</label>
+<input type="password" id="patInput" placeholder="github_pat_..." autocomplete="off">
+<div class="pat-hint">
+Necesitas un <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Fine-grained PAT</a> con permiso <b>Actions: Read &amp; Write</b> en el repositorio.
+</div>
+<div class="pat-actions">
+<button class="btn-pat-clear" id="patClearBtn" style="display:none">Borrar token</button>
+<span style="flex:1"></span>
+<button class="btn-pat-cancel" id="patCancelBtn">Cancelar</button>
+<button class="btn-pat-save" id="patSaveBtn">Guardar</button>
+</div>
+</div>
+</div>
+
+<div class="live-fetch-overlay" id="liveFetchOverlay">
+<div class="live-fetch-modal">
+<div class="live-fetch-title">Cargando datos en vivo de ESPN</div>
+<div class="live-fetch-message" id="liveFetchMessage">Iniciando...</div>
+<div class="live-fetch-progress"><div class="live-fetch-bar" id="liveFetchBar"></div></div>
+<div class="live-fetch-pct" id="liveFetchPct">0%</div>
+<button class="live-fetch-skip" id="liveFetchSkip">Usar datos estáticos</button>
+</div>
+</div>
+
 <script src="data/leagues.js"></script>
 <script>
 // ================= GLOBAL STATE =================
@@ -211,6 +267,7 @@ var standingsIsLive = false;
 var ESPN_NAME_MAP = {};
 var TEAM_LOGOS = {};
 var REF_KEYS = [];
+var liveFetchAborted = false;
 
 // ================= LEAGUE NAVIGATION =================
 (function buildLeagueNav(){
@@ -327,7 +384,24 @@ document.getElementById('analysisResults').style.display='none';
 
 // Fetch live standings
 fetchLiveStandings();
+
+// Auto-fetch live match data from ESPN
+liveFetchAborted=false;
+fetchAllLiveMatches().then(function(matches){
+if(matches&&matches.length>0&&!liveFetchAborted){
+applyLiveData(matches);
 }
+}).catch(function(err){
+console.warn('[LIVE] Fallback to static data:',err);
+hideLiveFetchProgress();
+});
+}
+
+// ================= SKIP BUTTON =================
+document.getElementById('liveFetchSkip').onclick=function(){
+liveFetchAborted=true;
+hideLiveFetchProgress();
+};
 
 // ================= UTILITIES =================
 function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b},0)/arr.length:0}
@@ -337,6 +411,224 @@ function poissonPmf(l,k){return Math.pow(l,k)*Math.exp(-l)/factorial(k)}
 function erf(x){var a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;var s=x<0?-1:1;x=Math.abs(x);var t=1/(1+p*x);var y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);return s*y}
 function normalCDF(x,mu,sigma){return 0.5*(1+erf((x-mu)/(sigma*Math.SQRT2)))}
 function pct(v){return Math.round(v*100)}
+
+// ================= LIVE ESPN FETCH =================
+function getCutoffDate(leagueId){
+var now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
+if(leagueId==='liga-mx'){return m<=6?new Date(y,0,1):new Date(y,6,1)}
+if(leagueId==='champions-league'){return m>=7?new Date(y,6,1):new Date(y-1,6,1)}
+return m>=8?new Date(y,7,1):new Date(y-1,7,1)}
+
+function showLiveFetchProgress(msg,current,total){
+var ov=document.getElementById('liveFetchOverlay');
+ov.classList.add('visible');
+document.getElementById('liveFetchMessage').textContent=msg;
+var p=total>0?Math.round(current/total*100):0;
+document.getElementById('liveFetchBar').style.width=p+'%';
+document.getElementById('liveFetchPct').textContent=p+'%'}
+
+function updateLiveFetchProgress(msg,current,total){
+document.getElementById('liveFetchMessage').textContent=msg;
+var p=total>0?Math.round(current/total*100):0;
+document.getElementById('liveFetchBar').style.width=p+'%';
+document.getElementById('liveFetchPct').textContent=p+'%'}
+
+function hideLiveFetchProgress(){
+document.getElementById('liveFetchOverlay').classList.remove('visible')}
+
+function parseESPNTeamStats(statistics){
+if(!statistics||!Array.isArray(statistics))return null;
+var stats={};
+for(var i=0;i<statistics.length;i++){
+var item=statistics[i];
+var name=(item.name||'').toLowerCase();
+var label=(item.label||'').toLowerCase();
+var val=item.displayValue||String(item.value||'0');
+if(name)stats[name]=val;
+if(label)stats[label]=val}
+return{
+possession:parseFloat(stats['possessionpct']||stats['possession']||stats['ball possession']||'50')||50,
+shotsTotal:parseInt(stats['totalshots']||stats['shots']||stats['total shots']||'0')||0,
+shotsOnTarget:parseInt(stats['shotsontarget']||stats['shotsongoal']||stats['shots on target']||stats['shots on goal']||'0')||0,
+corners:parseInt(stats['cornerkicks']||stats['corner kicks']||stats['corners']||'0')||0,
+fouls:parseInt(stats['foulscommitted']||stats['fouls committed']||stats['fouls']||'0')||0,
+yellowCards:parseInt(stats['yellowcards']||stats['yellow cards']||'0')||0,
+redCards:parseInt(stats['redcards']||stats['red cards']||'0')||0,
+offsides:parseInt(stats['offsides']||'0')||0,
+freeKicks:0,xG:0,firstGoalMinute:null}}
+
+function loadMatchCache(leagueId){
+try{
+var raw=localStorage.getItem('espn_live_'+leagueId);
+if(!raw)return null;
+var c=JSON.parse(raw);
+if(c.version!==1)return null;
+var cutoff=getCutoffDate(leagueId).toISOString().slice(0,10);
+if(c.cutoffDate!==cutoff)return null;
+return c}catch(e){return null}}
+
+function saveMatchCache(leagueId,matches,cutoff){
+try{
+var obj={version:1,cutoffDate:cutoff.toISOString().slice(0,10),timestamp:Date.now(),matches:matches};
+localStorage.setItem('espn_live_'+leagueId,JSON.stringify(obj))}catch(e){console.warn('[LIVE] Cache save failed:',e)}}
+
+function fetchAllLiveMatches(){
+if(!LEAGUE_META||!LEAGUE_META.espnSlug)return Promise.resolve(null);
+var leagueId=currentLeague;
+var slug=LEAGUE_META.espnSlug;
+var cutoff=getCutoffDate(leagueId);
+var today=new Date();
+today.setHours(0,0,0,0);
+
+// Build date list from cutoff to today
+var dates=[];
+var d=new Date(cutoff);
+while(d<=today){
+var yy=d.getFullYear(),mm=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+dates.push(yy+''+mm+''+dd);
+d.setDate(d.getDate()+1)}
+
+showLiveFetchProgress('Escaneando partidos... 0/'+dates.length+' fechas',0,dates.length);
+
+// Phase 1: Scan scoreboards
+var allEvents=[];
+var BATCH=8;
+
+function fetchDateBatch(startIdx){
+if(liveFetchAborted||currentLeague!==leagueId)return Promise.resolve();
+var batch=dates.slice(startIdx,startIdx+BATCH);
+if(!batch.length)return Promise.resolve();
+var promises=batch.map(function(dateStr){
+return fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+slug+'/scoreboard?dates='+dateStr+'&limit=50')
+.then(function(r){return r.ok?r.json():null})
+.then(function(j){
+if(!j||!j.events)return;
+for(var ei=0;ei<j.events.length;ei++){
+var ev=j.events[ei];
+if(!ev.competitions||!ev.competitions[0])continue;
+var comp=ev.competitions[0];
+var status=comp.status&&comp.status.type?comp.status.type.completed:false;
+if(!status)continue;
+var competitors=comp.competitors||[];
+var homeKey=null,awayKey=null,homeGoals=0,awayGoals=0;
+var referee=null;
+// Extract referee if available
+var officials=comp.officials||[];
+if(officials.length)referee=officials[0].displayName||officials[0].fullName||null;
+for(var ci=0;ci<competitors.length;ci++){
+var c=competitors[ci];
+var teamName=c.team?c.team.displayName||c.team.name:'';
+var key=resolveESPNTeam(teamName);
+if(c.homeAway==='home'){homeKey=key;homeGoals=parseInt(c.score)||0}
+else{awayKey=key;awayGoals=parseInt(c.score)||0}}
+if(homeKey&&awayKey){
+allEvents.push({eventId:ev.id,date:dateStr.slice(0,4)+'-'+dateStr.slice(4,6)+'-'+dateStr.slice(6,8),homeTeam:homeKey,awayTeam:awayKey,homeGoals:homeGoals,awayGoals:awayGoals,referee:referee})}}
+}).catch(function(){})});
+return Promise.all(promises).then(function(){
+var done=Math.min(startIdx+BATCH,dates.length);
+if(!liveFetchAborted&&currentLeague===leagueId)
+updateLiveFetchProgress('Escaneando partidos... '+done+'/'+dates.length+' fechas',done,dates.length);
+if(startIdx+BATCH<dates.length)return fetchDateBatch(startIdx+BATCH)})}
+
+return fetchDateBatch(0).then(function(){
+if(liveFetchAborted||currentLeague!==leagueId)return null;
+if(!allEvents.length){hideLiveFetchProgress();return null}
+
+// Check cache — only fetch summaries for uncached events
+var cache=loadMatchCache(leagueId);
+var cachedMap={};
+if(cache&&cache.matches){
+for(var ci=0;ci<cache.matches.length;ci++){
+var cm=cache.matches[ci];
+if(cm.eventId)cachedMap[cm.eventId]=cm}}
+
+var uncached=allEvents.filter(function(ev){return!cachedMap[ev.eventId]});
+var cachedMatches=allEvents.filter(function(ev){return!!cachedMap[ev.eventId]}).map(function(ev){return cachedMap[ev.eventId]});
+
+console.log('[LIVE] Phase 1 done:',allEvents.length,'events,',uncached.length,'need summary,',cachedMatches.length,'cached');
+
+if(!uncached.length){
+// All cached
+hideLiveFetchProgress();
+var result=cachedMatches.sort(function(a,b){return a.date<b.date?-1:1});
+for(var ji=0;ji<result.length;ji++)result[ji].jornada=ji+1;
+return result}
+
+// Phase 2: Fetch summaries for uncached events
+updateLiveFetchProgress('Cargando estadísticas... 0/'+uncached.length+' partidos',0,uncached.length);
+var newMatches=[];
+var SBATCH=8;
+
+function fetchSummaryBatch(sIdx){
+if(liveFetchAborted||currentLeague!==leagueId)return Promise.resolve();
+var sbatch=uncached.slice(sIdx,sIdx+SBATCH);
+if(!sbatch.length)return Promise.resolve();
+var sPromises=sbatch.map(function(ev){
+return fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+slug+'/summary?event='+ev.eventId)
+.then(function(r){return r.ok?r.json():null})
+.then(function(summary){
+if(!summary)return;
+var homeStats=null,awayStats=null;
+if(summary.boxscore&&summary.boxscore.teams){
+for(var ti=0;ti<summary.boxscore.teams.length;ti++){
+var team=summary.boxscore.teams[ti];
+var parsed=parseESPNTeamStats(team.statistics||[]);
+if(!parsed)continue;
+if(team.homeAway==='home')homeStats=parsed;
+else awayStats=parsed}}
+if(!homeStats)homeStats={possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null};
+if(!awayStats)awayStats={possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null};
+// freeKicks = opponent fouls
+homeStats.freeKicks=awayStats.fouls||0;
+awayStats.freeKicks=homeStats.fouls||0;
+newMatches.push({eventId:ev.eventId,date:ev.date,homeTeam:ev.homeTeam,awayTeam:ev.awayTeam,homeGoals:ev.homeGoals,awayGoals:ev.awayGoals,referee:ev.referee,homeStats:homeStats,awayStats:awayStats})
+}).catch(function(){
+// On error, push match with default stats
+newMatches.push({eventId:ev.eventId,date:ev.date,homeTeam:ev.homeTeam,awayTeam:ev.awayTeam,homeGoals:ev.homeGoals,awayGoals:ev.awayGoals,referee:ev.referee,
+homeStats:{possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null},
+awayStats:{possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null}})})});
+return Promise.all(sPromises).then(function(){
+var sDone=Math.min(sIdx+SBATCH,uncached.length);
+if(!liveFetchAborted&&currentLeague===leagueId)
+updateLiveFetchProgress('Cargando estadísticas... '+sDone+'/'+uncached.length+' partidos',sDone,uncached.length);
+if(sIdx+SBATCH<uncached.length)return fetchSummaryBatch(sIdx+SBATCH)})}
+
+return fetchSummaryBatch(0).then(function(){
+if(liveFetchAborted||currentLeague!==leagueId)return null;
+var allMatches=cachedMatches.concat(newMatches);
+allMatches.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});
+for(var ji=0;ji<allMatches.length;ji++)allMatches[ji].jornada=ji+1;
+saveMatchCache(leagueId,allMatches,cutoff);
+hideLiveFetchProgress();
+console.log('[LIVE] Phase 2 done:',newMatches.length,'new summaries,',allMatches.length,'total matches');
+return allMatches})})}
+
+function recomputeReferees(matches){
+var refs={};
+for(var i=0;i<matches.length;i++){
+var m=matches[i];
+if(!m.referee)continue;
+var key=m.referee.toLowerCase().replace(/[^a-z0-9]/g,'_');
+if(!refs[key])refs[key]={name:m.referee,matches:0,totalYC:0,totalRC:0,totalFouls:0};
+refs[key].matches++;
+refs[key].totalYC+=(m.homeStats.yellowCards||0)+(m.awayStats.yellowCards||0);
+refs[key].totalRC+=(m.homeStats.redCards||0)+(m.awayStats.redCards||0);
+refs[key].totalFouls+=(m.homeStats.fouls||0)+(m.awayStats.fouls||0)}
+var result={};
+for(var rk in refs){
+var r=refs[rk];
+if(r.matches<1)continue;
+result[rk]={name:r.name,matches:r.matches,avgYC:+(r.totalYC/r.matches).toFixed(1),avgRC:+(r.totalRC/r.matches).toFixed(2),avgFouls:+(r.totalFouls/r.matches).toFixed(1),totalYC:r.totalYC,totalRC:r.totalRC}}
+return result}
+
+function applyLiveData(matches){
+SEASON_MATCHES=matches;
+var newRefs=recomputeReferees(matches);
+if(Object.keys(newRefs).length>0){REFEREES=newRefs;REF_KEYS=Object.keys(REFEREES)}
+var now=new Date();
+var timeStr=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+document.getElementById('headerBadge').innerHTML='<span class="live-dot"></span>&nbsp; LIVE &middot; '+matches.length+' partidos ESPN &middot; '+timeStr;
+console.log('[LIVE] Applied',matches.length,'live matches,',Object.keys(newRefs).length,'referees')}
 
 // ================= DATA EXTRACTION =================
 function getTeamMatches(id){
@@ -952,17 +1244,29 @@ if(isDark){document.documentElement.removeAttribute('data-theme');localStorage.s
 else{document.documentElement.setAttribute('data-theme','dark');localStorage.setItem('theme','dark');toggle.innerHTML='&#9728;'}
 }})();
 
-// ================= AUTO-UPDATE (server mode only) =================
+// ================= AUTO-UPDATE (server + GitHub Pages) =================
 (function(){
 // Only activate on http(s) — skip file:// entirely
 if(location.protocol !== 'http:' && location.protocol !== 'https:') return;
+
+var GH_OWNER = 'leonelmitechnologies-coder';
+var GH_REPO = 'multi-liga-analytics';
+var GH_WORKFLOW = 'update-data.yml';
 
 var refreshBtn = document.getElementById('refreshBtn');
 var indicator = document.getElementById('updateIndicator');
 var updateText = document.getElementById('updateText');
 var pollTimer = null;
 var lastCompletedAt = null;
-var serverAvailable = false; // true only after successful probe
+var serverAvailable = false;
+var ghMode = false; // true when running on GitHub Pages
+
+// --- PAT modal elements ---
+var patOverlay = document.getElementById('patOverlay');
+var patInput = document.getElementById('patInput');
+var patSaveBtn = document.getElementById('patSaveBtn');
+var patCancelBtn = document.getElementById('patCancelBtn');
+var patClearBtn = document.getElementById('patClearBtn');
 
 function showIndicator(msg, isToast) {
   updateText.textContent = msg;
@@ -984,14 +1288,12 @@ function reloadCurrentLeagueData() {
   var oldScript = document.getElementById('leagueDataScript');
   if (oldScript) oldScript.remove();
 
-  // Save current selections
   var hSel = document.getElementById('homeTeam');
   var aSel = document.getElementById('awayTeam');
   var prevHome = hSel ? hSel.value : null;
   var prevAway = aSel ? aSel.value : null;
   var hadAnalysis = document.getElementById('analysisResults').style.display !== 'none';
 
-  // Reset state for reload
   TEAM_LOGOS = {};
 
   var script = document.createElement('script');
@@ -999,11 +1301,9 @@ function reloadCurrentLeagueData() {
   script.src = 'data/' + LEAGUES[currentLeague].file + '?t=' + Date.now();
   script.onload = function() {
     onLeagueLoaded();
-    // Restore selections
     if (prevHome && TEAMS[prevHome]) hSel.value = prevHome;
     if (prevAway && TEAMS[prevAway]) aSel.value = prevAway;
     updateShields();
-    // Re-run analysis if it was visible
     if (hadAnalysis && prevHome && prevAway && prevHome !== prevAway && TEAMS[prevHome] && TEAMS[prevAway]) {
       var result = runAnalysis(prevHome, prevAway);
       renderAll(result);
@@ -1016,6 +1316,13 @@ function reloadCurrentLeagueData() {
   document.body.appendChild(script);
 }
 
+function setRefreshBusy(busy) {
+  refreshBtn.disabled = busy;
+  if (busy) refreshBtn.classList.add('spinning');
+  else refreshBtn.classList.remove('spinning');
+}
+
+// ---- Local server mode ----
 function pollStatus() {
   fetch('/api/update-status').then(function(r) { return r.json(); }).then(function(status) {
     if (status.running) {
@@ -1025,7 +1332,6 @@ function pollStatus() {
     } else {
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       setRefreshBusy(false);
-      // Scraper just completed (new completedAt)
       if (status.completedAt && status.completedAt !== lastCompletedAt && lastCompletedAt !== null) {
         if (status.lastResult === 'success') {
           reloadCurrentLeagueData();
@@ -1033,7 +1339,6 @@ function pollStatus() {
           hideIndicator();
         }
       } else if (status.stale) {
-        // Data is stale, trigger update
         showIndicator('Actualizando datos...', false);
         fetch('/api/trigger-update');
         pollTimer = setInterval(pollStatus, 3000);
@@ -1043,37 +1348,174 @@ function pollStatus() {
       lastCompletedAt = status.completedAt;
     }
   }).catch(function() {
-    // Server not available (maybe file:// mode or server down)
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     setRefreshBusy(false);
     hideIndicator();
   });
 }
 
-// Refresh button: enable/disable based on scraper state
-function setRefreshBusy(busy) {
-  refreshBtn.disabled = busy;
-  if (busy) refreshBtn.classList.add('spinning');
-  else refreshBtn.classList.remove('spinning');
-}
-
-refreshBtn.addEventListener('click', function() {
+function triggerLocalUpdate() {
   if (refreshBtn.disabled || !serverAvailable) return;
   setRefreshBusy(true);
   showIndicator('Actualizando datos...', false);
-  fetch('/api/trigger-update').then(function(r) { return r.json(); }).then(function(res) {
+  fetch('/api/trigger-update').then(function(r) { return r.json(); }).then(function() {
     if (!pollTimer) pollTimer = setInterval(pollStatus, 3000);
   }).catch(function() { setRefreshBusy(false); hideIndicator(); });
+}
+
+// ---- GitHub Pages mode ----
+function ghApi(path, opts) {
+  var pat = localStorage.getItem('gh_pat');
+  if (!pat) return Promise.reject(new Error('no_pat'));
+  var url = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + path;
+  var headers = { 'Authorization': 'token ' + pat, 'Accept': 'application/vnd.github+json' };
+  return fetch(url, Object.assign({ headers: headers }, opts || {}));
+}
+
+function triggerGHWorkflow() {
+  var pat = localStorage.getItem('gh_pat');
+  if (!pat) { showPatModal(); return; }
+  setRefreshBusy(true);
+  showIndicator('Disparando workflow...', false);
+  ghApi('/actions/workflows/' + GH_WORKFLOW + '/dispatches', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'token ' + pat,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ref: 'main' })
+  }).then(function(r) {
+    if (r.status === 204 || r.ok) {
+      showIndicator('Workflow iniciado, esperando...', false);
+      // Wait 5s for the run to appear, then start polling
+      setTimeout(function() { pollGHWorkflow(Date.now()); }, 5000);
+    } else if (r.status === 401 || r.status === 403) {
+      setRefreshBusy(false);
+      hideIndicator();
+      localStorage.removeItem('gh_pat');
+      showToast('Token inválido o sin permisos');
+      showPatModal();
+    } else {
+      setRefreshBusy(false);
+      hideIndicator();
+      showToast('Error al disparar workflow (' + r.status + ')');
+    }
+  }).catch(function() {
+    setRefreshBusy(false);
+    hideIndicator();
+    showToast('Error de red');
+  });
+}
+
+function pollGHWorkflow(startedAt) {
+  ghApi('/actions/runs?per_page=1').then(function(r) { return r.json(); }).then(function(data) {
+    var run = data.workflow_runs && data.workflow_runs[0];
+    if (!run) {
+      // No runs found yet, keep polling
+      if (Date.now() - startedAt < 300000) { // 5 min max
+        setTimeout(function() { pollGHWorkflow(startedAt); }, 15000);
+      } else {
+        setRefreshBusy(false);
+        hideIndicator();
+        showToast('Timeout esperando workflow');
+      }
+      return;
+    }
+    if (run.status === 'completed') {
+      setRefreshBusy(false);
+      if (run.conclusion === 'success') {
+        showToast('Datos actualizados — recargando...');
+        setTimeout(function() { location.reload(); }, 2000);
+      } else {
+        showToast('Workflow falló: ' + (run.conclusion || 'unknown'));
+      }
+    } else if (run.status === 'queued' || run.status === 'in_progress' || run.status === 'waiting') {
+      showIndicator('Workflow en progreso...', false);
+      if (Date.now() - startedAt < 300000) {
+        setTimeout(function() { pollGHWorkflow(startedAt); }, 15000);
+      } else {
+        setRefreshBusy(false);
+        hideIndicator();
+        showToast('Timeout esperando workflow');
+      }
+    } else {
+      setRefreshBusy(false);
+      hideIndicator();
+    }
+  }).catch(function() {
+    setRefreshBusy(false);
+    hideIndicator();
+    showToast('Error consultando workflow');
+  });
+}
+
+// ---- PAT Modal ----
+function showPatModal() {
+  var existing = localStorage.getItem('gh_pat');
+  patInput.value = '';
+  patClearBtn.style.display = existing ? '' : 'none';
+  patOverlay.classList.add('visible');
+  patInput.focus();
+}
+
+function hidePatModal() {
+  patOverlay.classList.remove('visible');
+  patInput.value = '';
+}
+
+patSaveBtn.addEventListener('click', function() {
+  var val = patInput.value.trim();
+  if (!val) return;
+  localStorage.setItem('gh_pat', val);
+  hidePatModal();
+  refreshBtn.style.display = 'flex';
+  showToast('Token guardado');
 });
 
-// Initial probe: detect if local dev server is available
-// On GitHub Pages this will 404 → catch → features stay disabled
+patCancelBtn.addEventListener('click', hidePatModal);
+
+patClearBtn.addEventListener('click', function() {
+  localStorage.removeItem('gh_pat');
+  hidePatModal();
+  refreshBtn.style.display = 'none';
+  showToast('Token eliminado');
+});
+
+patOverlay.addEventListener('click', function(e) {
+  if (e.target === patOverlay) hidePatModal();
+});
+
+patInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') patSaveBtn.click();
+  if (e.key === 'Escape') hidePatModal();
+});
+
+// ---- Click handler (dual mode) ----
+refreshBtn.addEventListener('click', function() {
+  if (refreshBtn.disabled) return;
+  if (serverAvailable) {
+    triggerLocalUpdate();
+  } else if (ghMode) {
+    triggerGHWorkflow();
+  }
+});
+
+// Allow long-press on refresh button to reconfigure PAT in GH mode
+refreshBtn.addEventListener('contextmenu', function(e) {
+  if (ghMode) {
+    e.preventDefault();
+    showPatModal();
+  }
+});
+
+// ---- Initial probe ----
 setTimeout(function() {
   fetch('/api/update-status').then(function(r) {
     if (!r.ok) throw new Error('not server');
     return r.json();
   }).then(function(status) {
-    // Server confirmed — enable refresh button and auto-update
+    // Server confirmed — local mode
     serverAvailable = true;
     refreshBtn.style.display = 'flex';
     lastCompletedAt = status.completedAt;
@@ -1087,7 +1529,13 @@ setTimeout(function() {
       fetch('/api/trigger-update');
       pollTimer = setInterval(pollStatus, 3000);
     }
-  }).catch(function() { /* not local server (GitHub Pages, CDN, etc.) — stay silent */ });
+  }).catch(function() {
+    // Not local server → GitHub Pages mode
+    ghMode = true;
+    if (localStorage.getItem('gh_pat')) {
+      refreshBtn.style.display = 'flex';
+    }
+  });
 }, 1000);
 })();
 </script>
