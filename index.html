@@ -253,7 +253,7 @@ Necesitas un <a href="https://github.com/settings/personal-access-tokens/new" ta
 <div class="live-fetch-message" id="liveFetchMessage">Iniciando...</div>
 <div class="live-fetch-progress"><div class="live-fetch-bar" id="liveFetchBar"></div></div>
 <div class="live-fetch-pct" id="liveFetchPct">0%</div>
-<button class="live-fetch-skip" id="liveFetchSkip">Usar datos estáticos</button>
+<button class="live-fetch-skip" id="liveFetchSkip" onclick="liveFetchAborted=true;document.getElementById('liveFetchOverlay').classList.remove('visible')">Usar datos estáticos</button>
 </div>
 </div>
 
@@ -385,23 +385,10 @@ document.getElementById('analysisResults').style.display='none';
 // Fetch live standings
 fetchLiveStandings();
 
-// Auto-fetch live match data from ESPN
+// Auto-fetch live match data from ESPN (fast delta merge)
 liveFetchAborted=false;
-fetchAllLiveMatches().then(function(matches){
-if(matches&&matches.length>0&&!liveFetchAborted){
-applyLiveData(matches);
+fetchLiveUpdates();
 }
-}).catch(function(err){
-console.warn('[LIVE] Fallback to static data:',err);
-hideLiveFetchProgress();
-});
-}
-
-// ================= SKIP BUTTON =================
-document.getElementById('liveFetchSkip').onclick=function(){
-liveFetchAborted=true;
-hideLiveFetchProgress();
-};
 
 // ================= UTILITIES =================
 function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b},0)/arr.length:0}
@@ -412,223 +399,164 @@ function erf(x){var a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.45315202
 function normalCDF(x,mu,sigma){return 0.5*(1+erf((x-mu)/(sigma*Math.SQRT2)))}
 function pct(v){return Math.round(v*100)}
 
-// ================= LIVE ESPN FETCH =================
+// ================= LIVE ESPN FETCH (Fast Delta Merge) =================
 function getCutoffDate(leagueId){
 var now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
 if(leagueId==='liga-mx'){return m<=6?new Date(y,0,1):new Date(y,6,1)}
 if(leagueId==='champions-league'){return m>=7?new Date(y,6,1):new Date(y-1,6,1)}
 return m>=8?new Date(y,7,1):new Date(y-1,7,1)}
 
-function showLiveFetchProgress(msg,current,total){
+function fmtDateESPN(d){
+var yy=d.getFullYear(),mm=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+return yy+mm+dd}
+
+function fmtDateISO(d){
+var yy=d.getFullYear(),mm=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+return yy+'-'+mm+'-'+dd}
+
+function showLiveFetchProgress(msg){
 var ov=document.getElementById('liveFetchOverlay');
 ov.classList.add('visible');
 document.getElementById('liveFetchMessage').textContent=msg;
-var p=total>0?Math.round(current/total*100):0;
-document.getElementById('liveFetchBar').style.width=p+'%';
-document.getElementById('liveFetchPct').textContent=p+'%'}
-
-function updateLiveFetchProgress(msg,current,total){
-document.getElementById('liveFetchMessage').textContent=msg;
-var p=total>0?Math.round(current/total*100):0;
-document.getElementById('liveFetchBar').style.width=p+'%';
-document.getElementById('liveFetchPct').textContent=p+'%'}
+document.getElementById('liveFetchBar').style.width='30%';
+document.getElementById('liveFetchPct').textContent=''}
 
 function hideLiveFetchProgress(){
 document.getElementById('liveFetchOverlay').classList.remove('visible')}
 
-function parseESPNTeamStats(statistics){
-if(!statistics||!Array.isArray(statistics))return null;
-var stats={};
-for(var i=0;i<statistics.length;i++){
-var item=statistics[i];
-var name=(item.name||'').toLowerCase();
-var label=(item.label||'').toLowerCase();
-var val=item.displayValue||String(item.value||'0');
-if(name)stats[name]=val;
-if(label)stats[label]=val}
-return{
-possession:parseFloat(stats['possessionpct']||stats['possession']||stats['ball possession']||'50')||50,
-shotsTotal:parseInt(stats['totalshots']||stats['shots']||stats['total shots']||'0')||0,
-shotsOnTarget:parseInt(stats['shotsontarget']||stats['shotsongoal']||stats['shots on target']||stats['shots on goal']||'0')||0,
-corners:parseInt(stats['cornerkicks']||stats['corner kicks']||stats['corners']||'0')||0,
-fouls:parseInt(stats['foulscommitted']||stats['fouls committed']||stats['fouls']||'0')||0,
-yellowCards:parseInt(stats['yellowcards']||stats['yellow cards']||'0')||0,
-redCards:parseInt(stats['redcards']||stats['red cards']||'0')||0,
-offsides:parseInt(stats['offsides']||'0')||0,
-freeKicks:0,xG:0,firstGoalMinute:null}}
+function parseScoreboardEvent(ev,slug){
+if(!ev.competitions||!ev.competitions[0])return null;
+var comp=ev.competitions[0];
+var status=comp.status&&comp.status.type?comp.status.type.completed:false;
+if(!status)return null;
+var competitors=comp.competitors||[];
+var homeKey=null,awayKey=null,homeGoals=0,awayGoals=0;
+var homeEspnId=null,awayEspnId=null;
+var referee=null;
+var officials=comp.officials||[];
+if(officials.length)referee=officials[0].displayName||officials[0].fullName||null;
 
-function loadMatchCache(leagueId){
-try{
-var raw=localStorage.getItem('espn_live_'+leagueId);
-if(!raw)return null;
-var c=JSON.parse(raw);
-if(c.version!==1)return null;
-var cutoff=getCutoffDate(leagueId).toISOString().slice(0,10);
-if(c.cutoffDate!==cutoff)return null;
-return c}catch(e){return null}}
+for(var ci=0;ci<competitors.length;ci++){
+var c=competitors[ci];
+var teamName=c.team?c.team.displayName||c.team.name:'';
+var key=resolveESPNTeam(teamName);
+var espnId=c.team?c.team.id:null;
+if(c.homeAway==='home'){homeKey=key;homeGoals=parseInt(c.score)||0;homeEspnId=espnId}
+else{awayKey=key;awayGoals=parseInt(c.score)||0;awayEspnId=espnId}}
 
-function saveMatchCache(leagueId,matches,cutoff){
-try{
-var obj={version:1,cutoffDate:cutoff.toISOString().slice(0,10),timestamp:Date.now(),matches:matches};
-localStorage.setItem('espn_live_'+leagueId,JSON.stringify(obj))}catch(e){console.warn('[LIVE] Cache save failed:',e)}}
+if(!homeKey||!awayKey)return null;
 
-function fetchAllLiveMatches(){
-if(!LEAGUE_META||!LEAGUE_META.espnSlug)return Promise.resolve(null);
-var leagueId=currentLeague;
+// Parse inline stats from scoreboard (9 stats per team)
+var homeStats={possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null};
+var awayStats={possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null};
+
+for(var ti=0;ti<competitors.length;ti++){
+var ct=competitors[ti];
+var st=ct.statistics||[];
+var parsed={};
+for(var si=0;si<st.length;si++){parsed[st[si].name]=parseFloat(st[si].displayValue)||0}
+var target=ct.homeAway==='home'?homeStats:awayStats;
+target.possession=parsed.possessionPct||50;
+target.shotsTotal=Math.round(parsed.totalShots||0);
+target.shotsOnTarget=Math.round(parsed.shotsOnTarget||0);
+target.corners=Math.round(parsed.wonCorners||0);
+target.fouls=Math.round(parsed.foulsCommitted||0)}
+
+// Count cards from details[] array
+var details=comp.details||[];
+for(var di=0;di<details.length;di++){
+var det=details[di];
+var isYellow=det.yellowCard||(det.type&&det.type.text&&det.type.text.indexOf('Yellow')>=0);
+var isRed=det.redCard||(det.type&&det.type.text&&det.type.text.indexOf('Red')>=0);
+var detTeamId=det.team?det.team.id:null;
+if(isYellow){if(detTeamId==homeEspnId)homeStats.yellowCards++;else if(detTeamId==awayEspnId)awayStats.yellowCards++}
+if(isRed){if(detTeamId==homeEspnId)homeStats.redCards++;else if(detTeamId==awayEspnId)awayStats.redCards++}
+// First goal minute
+if(!homeStats.firstGoalMinute&&!awayStats.firstGoalMinute){
+var isGoal=det.type&&det.type.text&&det.type.text.indexOf('Goal')>=0&&(!det.type.text||det.type.text.indexOf('Missed')<0);
+if(isGoal&&det.clock&&det.clock.displayValue){
+var gMin=parseInt(det.clock.displayValue)||null;
+if(gMin){homeStats.firstGoalMinute=gMin;awayStats.firstGoalMinute=gMin}}}}
+
+// freeKicks = opponent fouls
+homeStats.freeKicks=awayStats.fouls||0;
+awayStats.freeKicks=homeStats.fouls||0;
+
+var evDate=ev.date?ev.date.slice(0,10):null;
+return{eventId:ev.id,date:evDate,homeTeam:homeKey,awayTeam:awayKey,homeGoals:homeGoals,awayGoals:awayGoals,referee:referee,homeStats:homeStats,awayStats:awayStats}}
+
+function fetchLiveUpdates(){
+if(!LEAGUE_META||!LEAGUE_META.espnSlug)return;
 var slug=LEAGUE_META.espnSlug;
+var leagueId=currentLeague;
+
+// Find the last match date in static data
+var lastMatchDate=null;
+if(SEASON_MATCHES&&SEASON_MATCHES.length){
+var sortedDates=SEASON_MATCHES.map(function(m){return m.date}).filter(Boolean).sort();
+lastMatchDate=sortedDates[sortedDates.length-1]}
+if(!lastMatchDate){
 var cutoff=getCutoffDate(leagueId);
-var today=new Date();
-today.setHours(0,0,0,0);
+lastMatchDate=fmtDateISO(cutoff)}
 
-// Build date list from cutoff to today
+// Build existing match keys for dedup
+var existingKeys={};
+if(SEASON_MATCHES){
+for(var i=0;i<SEASON_MATCHES.length;i++){
+var m=SEASON_MATCHES[i];
+existingKeys[m.date+'|'+m.homeTeam+'|'+m.awayTeam]=true}}
+
+// Build date list from lastMatchDate-1 to today (overlap for safety)
+var startDate=new Date(lastMatchDate+'T00:00:00');
+startDate.setDate(startDate.getDate()-1);
+var today=new Date();today.setHours(0,0,0,0);
 var dates=[];
-var d=new Date(cutoff);
-while(d<=today){
-var yy=d.getFullYear(),mm=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
-dates.push(yy+''+mm+''+dd);
-d.setDate(d.getDate()+1)}
+var d=new Date(startDate);
+while(d<=today){dates.push(fmtDateESPN(d));d.setDate(d.getDate()+1)}
 
-showLiveFetchProgress('Escaneando partidos... 0/'+dates.length+' fechas',0,dates.length);
+if(!dates.length){console.log('[LIVE] No dates to fetch');return}
 
-// Phase 1: Scan scoreboards
-var allEvents=[];
-var BATCH=8;
+// Show overlay only if many dates (>14 = data is old)
+var showOverlay=dates.length>14;
+if(showOverlay)showLiveFetchProgress('Actualizando '+LEAGUE_META.shortName+'... ('+dates.length+' días)');
 
-function fetchDateBatch(startIdx){
-if(liveFetchAborted||currentLeague!==leagueId)return Promise.resolve();
-var batch=dates.slice(startIdx,startIdx+BATCH);
-if(!batch.length)return Promise.resolve();
-var promises=batch.map(function(dateStr){
+console.log('[LIVE] Fetching delta for',leagueId,':',dates.length,'days from',dates[0],'to',dates[dates.length-1]);
+
+// Fetch ALL dates in parallel (no batching — browser handles concurrency)
+var newMatches=[];
+var promises=dates.map(function(dateStr){
 return fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+slug+'/scoreboard?dates='+dateStr+'&limit=50')
 .then(function(r){return r.ok?r.json():null})
 .then(function(j){
 if(!j||!j.events)return;
 for(var ei=0;ei<j.events.length;ei++){
-var ev=j.events[ei];
-if(!ev.competitions||!ev.competitions[0])continue;
-var comp=ev.competitions[0];
-var status=comp.status&&comp.status.type?comp.status.type.completed:false;
-if(!status)continue;
-var competitors=comp.competitors||[];
-var homeKey=null,awayKey=null,homeGoals=0,awayGoals=0;
-var referee=null;
-// Extract referee if available
-var officials=comp.officials||[];
-if(officials.length)referee=officials[0].displayName||officials[0].fullName||null;
-for(var ci=0;ci<competitors.length;ci++){
-var c=competitors[ci];
-var teamName=c.team?c.team.displayName||c.team.name:'';
-var key=resolveESPNTeam(teamName);
-if(c.homeAway==='home'){homeKey=key;homeGoals=parseInt(c.score)||0}
-else{awayKey=key;awayGoals=parseInt(c.score)||0}}
-if(homeKey&&awayKey){
-allEvents.push({eventId:ev.id,date:dateStr.slice(0,4)+'-'+dateStr.slice(4,6)+'-'+dateStr.slice(6,8),homeTeam:homeKey,awayTeam:awayKey,homeGoals:homeGoals,awayGoals:awayGoals,referee:referee})}}
+var match=parseScoreboardEvent(j.events[ei],slug);
+if(!match)continue;
+var key=match.date+'|'+match.homeTeam+'|'+match.awayTeam;
+if(!existingKeys[key]){newMatches.push(match);existingKeys[key]=true}}
 }).catch(function(){})});
-return Promise.all(promises).then(function(){
-var done=Math.min(startIdx+BATCH,dates.length);
-if(!liveFetchAborted&&currentLeague===leagueId)
-updateLiveFetchProgress('Escaneando partidos... '+done+'/'+dates.length+' fechas',done,dates.length);
-if(startIdx+BATCH<dates.length)return fetchDateBatch(startIdx+BATCH)})}
 
-return fetchDateBatch(0).then(function(){
-if(liveFetchAborted||currentLeague!==leagueId)return null;
-if(!allEvents.length){hideLiveFetchProgress();return null}
+Promise.all(promises).then(function(){
+if(liveFetchAborted||currentLeague!==leagueId){if(showOverlay)hideLiveFetchProgress();return}
+if(showOverlay)hideLiveFetchProgress();
 
-// Check cache — only fetch summaries for uncached events
-var cache=loadMatchCache(leagueId);
-var cachedMap={};
-if(cache&&cache.matches){
-for(var ci=0;ci<cache.matches.length;ci++){
-var cm=cache.matches[ci];
-if(cm.eventId)cachedMap[cm.eventId]=cm}}
+if(newMatches.length>0){
+// MERGE: append new matches, re-sort, renumber jornadas
+SEASON_MATCHES=SEASON_MATCHES.concat(newMatches);
+SEASON_MATCHES.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});
+for(var ji=0;ji<SEASON_MATCHES.length;ji++)SEASON_MATCHES[ji].jornada=ji+1;
+console.log('[LIVE] Merged',newMatches.length,'new matches. Total:',SEASON_MATCHES.length)}
 
-var uncached=allEvents.filter(function(ev){return!cachedMap[ev.eventId]});
-var cachedMatches=allEvents.filter(function(ev){return!!cachedMap[ev.eventId]}).map(function(ev){return cachedMap[ev.eventId]});
-
-console.log('[LIVE] Phase 1 done:',allEvents.length,'events,',uncached.length,'need summary,',cachedMatches.length,'cached');
-
-if(!uncached.length){
-// All cached
-hideLiveFetchProgress();
-var result=cachedMatches.sort(function(a,b){return a.date<b.date?-1:1});
-for(var ji=0;ji<result.length;ji++)result[ji].jornada=ji+1;
-return result}
-
-// Phase 2: Fetch summaries for uncached events
-updateLiveFetchProgress('Cargando estadísticas... 0/'+uncached.length+' partidos',0,uncached.length);
-var newMatches=[];
-var SBATCH=8;
-
-function fetchSummaryBatch(sIdx){
-if(liveFetchAborted||currentLeague!==leagueId)return Promise.resolve();
-var sbatch=uncached.slice(sIdx,sIdx+SBATCH);
-if(!sbatch.length)return Promise.resolve();
-var sPromises=sbatch.map(function(ev){
-return fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+slug+'/summary?event='+ev.eventId)
-.then(function(r){return r.ok?r.json():null})
-.then(function(summary){
-if(!summary)return;
-var homeStats=null,awayStats=null;
-if(summary.boxscore&&summary.boxscore.teams){
-for(var ti=0;ti<summary.boxscore.teams.length;ti++){
-var team=summary.boxscore.teams[ti];
-var parsed=parseESPNTeamStats(team.statistics||[]);
-if(!parsed)continue;
-if(team.homeAway==='home')homeStats=parsed;
-else awayStats=parsed}}
-if(!homeStats)homeStats={possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null};
-if(!awayStats)awayStats={possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null};
-// freeKicks = opponent fouls
-homeStats.freeKicks=awayStats.fouls||0;
-awayStats.freeKicks=homeStats.fouls||0;
-newMatches.push({eventId:ev.eventId,date:ev.date,homeTeam:ev.homeTeam,awayTeam:ev.awayTeam,homeGoals:ev.homeGoals,awayGoals:ev.awayGoals,referee:ev.referee,homeStats:homeStats,awayStats:awayStats})
-}).catch(function(){
-// On error, push match with default stats
-newMatches.push({eventId:ev.eventId,date:ev.date,homeTeam:ev.homeTeam,awayTeam:ev.awayTeam,homeGoals:ev.homeGoals,awayGoals:ev.awayGoals,referee:ev.referee,
-homeStats:{possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null},
-awayStats:{possession:50,shotsTotal:0,shotsOnTarget:0,corners:0,fouls:0,yellowCards:0,redCards:0,offsides:0,freeKicks:0,xG:0,firstGoalMinute:null}})})});
-return Promise.all(sPromises).then(function(){
-var sDone=Math.min(sIdx+SBATCH,uncached.length);
-if(!liveFetchAborted&&currentLeague===leagueId)
-updateLiveFetchProgress('Cargando estadísticas... '+sDone+'/'+uncached.length+' partidos',sDone,uncached.length);
-if(sIdx+SBATCH<uncached.length)return fetchSummaryBatch(sIdx+SBATCH)})}
-
-return fetchSummaryBatch(0).then(function(){
-if(liveFetchAborted||currentLeague!==leagueId)return null;
-var allMatches=cachedMatches.concat(newMatches);
-allMatches.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});
-for(var ji=0;ji<allMatches.length;ji++)allMatches[ji].jornada=ji+1;
-saveMatchCache(leagueId,allMatches,cutoff);
-hideLiveFetchProgress();
-console.log('[LIVE] Phase 2 done:',newMatches.length,'new summaries,',allMatches.length,'total matches');
-return allMatches})})}
-
-function recomputeReferees(matches){
-var refs={};
-for(var i=0;i<matches.length;i++){
-var m=matches[i];
-if(!m.referee)continue;
-var key=m.referee.toLowerCase().replace(/[^a-z0-9]/g,'_');
-if(!refs[key])refs[key]={name:m.referee,matches:0,totalYC:0,totalRC:0,totalFouls:0};
-refs[key].matches++;
-refs[key].totalYC+=(m.homeStats.yellowCards||0)+(m.awayStats.yellowCards||0);
-refs[key].totalRC+=(m.homeStats.redCards||0)+(m.awayStats.redCards||0);
-refs[key].totalFouls+=(m.homeStats.fouls||0)+(m.awayStats.fouls||0)}
-var result={};
-for(var rk in refs){
-var r=refs[rk];
-if(r.matches<1)continue;
-result[rk]={name:r.name,matches:r.matches,avgYC:+(r.totalYC/r.matches).toFixed(1),avgRC:+(r.totalRC/r.matches).toFixed(2),avgFouls:+(r.totalFouls/r.matches).toFixed(1),totalYC:r.totalYC,totalRC:r.totalRC}}
-return result}
-
-function applyLiveData(matches){
-SEASON_MATCHES=matches;
-var newRefs=recomputeReferees(matches);
-if(Object.keys(newRefs).length>0){REFEREES=newRefs;REF_KEYS=Object.keys(REFEREES)}
+// Update badge
 var now=new Date();
 var timeStr=now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-document.getElementById('headerBadge').innerHTML='<span class="live-dot"></span>&nbsp; LIVE &middot; '+matches.length+' partidos ESPN &middot; '+timeStr;
-console.log('[LIVE] Applied',matches.length,'live matches,',Object.keys(newRefs).length,'referees')}
+var totalMatches=SEASON_MATCHES?SEASON_MATCHES.length:0;
+var liveLabel=newMatches.length>0?' LIVE ·':'';
+document.getElementById('headerBadge').innerHTML='<span class="live-dot"></span>&nbsp;'+liveLabel+' '+totalMatches+' partidos · '+timeStr;
+console.log('[LIVE] Done for',leagueId,'-',newMatches.length,'new,',totalMatches,'total');
+}).catch(function(err){
+if(showOverlay)hideLiveFetchProgress();
+console.warn('[LIVE] Error:',err)})}
 
 // ================= DATA EXTRACTION =================
 function getTeamMatches(id){
