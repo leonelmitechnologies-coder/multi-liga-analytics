@@ -11,6 +11,8 @@
     "update:serie-a": "node index.js --league serie-a",
     "update:bundesliga": "node index.js --league bundesliga",
     "update:champions-league": "node index.js --league champions-league",
+    "update:mls": "node index.js --league mls",
+    "update:concacaf": "node index.js --league concacaf-champions",
     "update:historical": "node index.js --skip-espn",
     "discover-teams": "node discover-teams.js"
   },

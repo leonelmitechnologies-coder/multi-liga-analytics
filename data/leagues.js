@@ -6,4 +6,5 @@ var LEAGUES = {
   'bundesliga':     { name: 'Bundesliga',      icon: 'DE', file: 'bundesliga-data.js' },
   'champions-league':{ name: 'Champions League', icon: 'UCL', file: 'champions-league-data.js' },
   'mls':             { name: 'MLS',              icon: 'US', file: 'mls-data.js' },
+  'concacaf-champions':{ name: 'Concacaf Champions Cup', icon: 'CC', file: 'concacaf-champions-data.js' },
 };

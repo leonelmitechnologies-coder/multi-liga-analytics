@@ -6,6 +6,7 @@ import serieA from './serie-a.js';
 import bundesliga from './bundesliga.js';
 import championsLeague from './champions-league.js';
 import mls from './mls.js';
+import concacafChampions from './concacaf-champions.js';
 
 const LEAGUES = {
   'liga-mx': ligaMX,
@@ -15,6 +16,7 @@ const LEAGUES = {
   'bundesliga': bundesliga,
   'champions-league': championsLeague,
   'mls': mls,
+  'concacaf-champions': concacafChampions,
 };
 
 export const AVAILABLE_LEAGUES = Object.keys(LEAGUES);

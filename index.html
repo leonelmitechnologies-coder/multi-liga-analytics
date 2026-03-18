@@ -405,6 +405,7 @@ function getCutoffDate(leagueId){
 var now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
 if(leagueId==='liga-mx'){return m<=6?new Date(y,0,1):new Date(y,6,1)}
 if(leagueId==='champions-league'){return m>=7?new Date(y,6,1):new Date(y-1,6,1)}
+if(leagueId==='concacaf-champions'){return new Date(y,0,1)}
 return m>=8?new Date(y,7,1):new Date(y-1,7,1)}
 
 function fmtDateESPN(d){
@@ -483,7 +484,7 @@ if(gMin){homeStats.firstGoalMinute=gMin;awayStats.firstGoalMinute=gMin}}}}
 homeStats.freeKicks=awayStats.fouls||0;
 awayStats.freeKicks=homeStats.fouls||0;
 
-var evDate=ev.date?ev.date.slice(0,10):null;
+var evDate=ev.date?fmtDateISO(new Date(ev.date)):null;
 return{eventId:ev.id,date:evDate,homeTeam:homeKey,awayTeam:awayKey,homeGoals:homeGoals,awayGoals:awayGoals,referee:referee,homeStats:homeStats,awayStats:awayStats}}
 
 function fetchLiveUpdates(){
@@ -593,7 +594,7 @@ function computeFatigue(teamId){
 var matches=SEASON_MATCHES.filter(function(m){return m.homeTeam===teamId||m.awayTeam===teamId});
 if(!matches.length)return{factor:1.0,daysSinceLastMatch:null,matchesIn14d:0,label:'Sin datos'};
 var today=new Date();
-var dates=matches.map(function(m){return new Date(m.date)}).sort(function(a,b){return b-a});
+var dates=matches.map(function(m){return new Date(m.date+'T12:00:00')}).sort(function(a,b){return b-a});
 var lastMatch=dates[0];
 var days=Math.round((today-lastMatch)/(1000*60*60*24));
 // Count matches in last 14 days
@@ -1073,7 +1074,7 @@ var hWins=allH2H.filter(function(m){return(m.home===a.homeTeam.short&&m.hG>m.aG)
 var draws=allH2H.filter(function(m){return m.hG===m.aG}).length;
 var aWins=allH2H.length-hWins-draws;
 var h2hHTML=allH2H.map(function(m){
-var d=new Date(m.date);var dateStr=d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+var d=new Date(m.date+'T12:00:00');var dateStr=d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
 return'<div class="match-result"><span class="match-date">'+dateStr+'</span><span class="match-teams">'+m.home+' vs '+m.away+'</span><span class="match-score">'+m.hG+' - '+m.aG+'</span><div class="match-stats-mini"><span>&#127183; '+m.cards+'</span><span>&#9873; '+m.corners+'</span></div></div>'}).join('');
 var st=a.standings;
 var liveBadge=standingsIsLive?'<span style="display:inline-flex;align-items:center;gap:4px;background:#e53e3e18;color:#e53e3e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:8px;letter-spacing:.5px;vertical-align:middle"><span style="width:6px;height:6px;background:#e53e3e;border-radius:50%;animation:livePulse 1.5s infinite"></span>EN VIVO</span>':'';
