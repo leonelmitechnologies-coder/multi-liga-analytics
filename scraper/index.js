@@ -76,7 +76,7 @@ async function processLeague(leagueId, args) {
     try {
       const latestCsvDate = csvMatches.length > 0
         ? csvMatches.reduce((max, m) => m.date > max ? m.date : max, '2000-01-01')
-        : '2024-09-01';
+        : (leagueConfig.espnScanStart || '2024-09-01');
       const scanStart = latestCsvDate;
       const today = new Date().toISOString().slice(0, 10);
       console.log(`\n  Scanning ESPN for matches after ${scanStart}...`);

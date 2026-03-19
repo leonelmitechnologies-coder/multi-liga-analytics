@@ -8,6 +8,7 @@ export default {
   bsd: null,
   footballdata: null,
   footballcsv: null,
+  espnScanStart: '2023-02-01',
   tournament: {
     type: 'annual',
     currentSeasonTournaments: 1,

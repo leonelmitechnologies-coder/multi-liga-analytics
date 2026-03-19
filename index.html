@@ -547,7 +547,11 @@ if(newMatches.length>0){
 SEASON_MATCHES=SEASON_MATCHES.concat(newMatches);
 SEASON_MATCHES.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});
 for(var ji=0;ji<SEASON_MATCHES.length;ji++)SEASON_MATCHES[ji].jornada=ji+1;
-console.log('[LIVE] Merged',newMatches.length,'new matches. Total:',SEASON_MATCHES.length)}
+console.log('[LIVE] Merged',newMatches.length,'new matches. Total:',SEASON_MATCHES.length);
+// Re-render analysis if active (updates computed standings with new matches)
+var hSel=document.getElementById('homeTeam'),aSel=document.getElementById('awayTeam');
+if(hSel&&aSel&&hSel.value&&aSel.value&&hSel.value!==aSel.value&&document.getElementById('analysisResults').style.display!=='none'){
+var res=runAnalysis(hSel.value,aSel.value);renderAll(res)}}
 
 // Update badge
 var now=new Date();
@@ -868,12 +872,34 @@ k=ESPN_NAME_MAP[c.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()]
 if(k)return k;
 return null}
 
+function preloadLogosAndUpdate(){
+if(!Object.keys(TEAM_LOGOS).length)return;
+var urls=Object.values(TEAM_LOGOS);var loaded=0;var total=urls.length;
+urls.forEach(function(u){var img=new Image();img.onload=img.onerror=function(){loaded++;if(loaded>=total){updateShields();document.querySelectorAll('.team-pick-shield').forEach(function(s){s.classList.add('ready')})}};img.src=u})}
+
+function fetchTeamLogos(){
+if(!LEAGUE_META||Object.keys(TEAM_LOGOS).length>0)return;
+fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/'+LEAGUE_META.espnSlug+'/teams')
+.then(function(r){return r.ok?r.json():null})
+.then(function(j){
+if(!j||!j.sports||!j.sports[0]||!j.sports[0].leagues||!j.sports[0].leagues[0])return;
+var teams=j.sports[0].leagues[0].teams||[];
+for(var i=0;i<teams.length;i++){
+var t=teams[i].team;if(!t)continue;
+var name=t.displayName||t.name||'';
+var key=resolveESPNTeam(name);
+if(!key)continue;
+var logo=t.logos&&t.logos[0]?t.logos[0].href:'';
+if(logo)TEAM_LOGOS[key]=logo}
+if(Object.keys(TEAM_LOGOS).length){console.log('[LIVE] Logos loaded from ESPN /teams:',Object.keys(TEAM_LOGOS).length);preloadLogosAndUpdate()}
+}).catch(function(){})}
+
 function fetchLiveStandings(){
 if(!LEAGUE_META)return;
 fetch('https://site.api.espn.com/apis/v2/sports/soccer/'+LEAGUE_META.espnSlug+'/standings')
 .then(function(r){return r.ok?r.json():null})
 .then(function(j){
-if(!j||!j.children||!j.children.length)return;
+if(!j||!j.children||!j.children.length){standingsIsLive=true;fetchTeamLogos();return}
 var entries=[];
 for(var ci=0;ci<j.children.length;ci++){var ce=j.children[ci].standings?.entries||[];for(var ei=0;ei<ce.length;ei++)entries.push(ce[ei])}
 var standings=[];
@@ -889,8 +915,9 @@ for(var si=0;si<(e.stats||[]).length;si++){var st=e.stats[si];s[st.name||st.abbr
 standings.push({id:key,rank:parseInt(s['rank']||0),mp:parseInt(s['gamesPlayed']||0),w:parseInt(s['wins']||0),d:parseInt(s['ties']||s['draws']||0),l:parseInt(s['losses']||0),gf:parseInt(s['pointsFor']||s['goalsFor']||0),ga:parseInt(s['pointsAgainst']||s['goalsAgainst']||0),gd:parseInt(s['pointDifferential']||s['goalDifference']||0),pts:parseInt(s['points']||0)})}
 standings.sort(function(a,b){return b.pts-a.pts||b.gd-a.gd||b.gf-a.gf});
 if(standings.length>0){liveStandings=standings;standingsIsLive=true;console.log('[LIVE] Standings loaded from ESPN:',standings.length,'teams');
-if(Object.keys(TEAM_LOGOS).length){var urls=Object.values(TEAM_LOGOS);var loaded=0;var total=urls.length;urls.forEach(function(u){var img=new Image();img.onload=img.onerror=function(){loaded++;if(loaded>=total){updateShields();document.querySelectorAll('.team-pick-shield').forEach(function(s){s.classList.add('ready')})}};img.src=u})}}
-}).catch(function(){})}
+preloadLogosAndUpdate()}
+else{standingsIsLive=true;fetchTeamLogos()}
+}).catch(function(){fetchTeamLogos()})}
 
 function computeStandings(){
 if(liveStandings&&liveStandings.length>0)return liveStandings;
