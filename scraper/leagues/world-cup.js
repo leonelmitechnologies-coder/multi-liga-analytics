@@ -1,0 +1,210 @@
+// FIFA World Cup 2026 configuration
+export default {
+  id: 'world-cup',
+  name: 'World Cup 2026',
+  shortName: 'WorldCup',
+  espn: { slug: 'fifa.world' },
+  apifootball: { leagueId: 1, seasons: [2026] },
+  bsd: { leagueId: 4 },
+  footballdata: { competitionCode: 'WC' },
+  footballcsv: null,
+  tournament: {
+    type: 'quadrennial',
+    currentSeasonTournaments: 1,
+    determineCutoffDate(matches) {
+      // World Cup 2026 runs from June 11 to July 19, 2026
+      if (matches.length === 0) return '2026-06-01';
+      const dates = matches.map(m => m.date).sort();
+      const newestDate = dates[dates.length - 1];
+      const newestYear = parseInt(newestDate.slice(0, 4));
+      return `${newestYear}-01-01`;
+    },
+    currentLabel: 'World Cup 2026',
+    standingsTitle: 'FIFA World Cup 2026 — Group Stage',
+  },
+  standingsZones: [
+    { range: [1, 2], color: 'var(--ag)', label: 'Round of 32 (1-2)' },
+    { range: [3, 3], color: 'var(--ab)', label: 'Playoff (3rd place)' },
+    { range: [4, 4], color: 'var(--ar)', label: 'Eliminated (4th)' },
+  ],
+  teams: {
+    // Host nations (automatically qualified)
+    mexico: {
+      csv: ['Mexico', 'México'],
+      espn: ['Mexico', 'México'],
+      apifootball: ['Mexico', 'México'],
+      bsd: ['Mexico', 'México'],
+      footballdata: ['Mexico'],
+      display: { name: 'Mexico', short: 'Mexico', abbr: 'MEX', color: '#006341', tc: '#fff' },
+    },
+    usa: {
+      csv: ['United States', 'USA', 'US'],
+      espn: ['United States', 'USA', 'US'],
+      apifootball: ['United States', 'USA'],
+      bsd: ['United States', 'USA'],
+      footballdata: ['United States'],
+      display: { name: 'United States', short: 'USA', abbr: 'USA', color: '#002868', tc: '#fff' },
+    },
+    canada: {
+      csv: ['Canada'],
+      espn: ['Canada'],
+      apifootball: ['Canada'],
+      bsd: ['Canada'],
+      footballdata: ['Canada'],
+      display: { name: 'Canada', short: 'Canada', abbr: 'CAN', color: '#FF0000', tc: '#fff' },
+    },
+    // CONMEBOL teams
+    argentina: {
+      csv: ['Argentina'],
+      espn: ['Argentina'],
+      apifootball: ['Argentina'],
+      bsd: ['Argentina'],
+      footballdata: ['Argentina'],
+      display: { name: 'Argentina', short: 'Argentina', abbr: 'ARG', color: '#74ACDF', tc: '#1a202c' },
+    },
+    brazil: {
+      csv: ['Brazil', 'Brasil'],
+      espn: ['Brazil', 'Brasil'],
+      apifootball: ['Brazil', 'Brasil'],
+      bsd: ['Brazil', 'Brasil'],
+      footballdata: ['Brazil'],
+      display: { name: 'Brazil', short: 'Brazil', abbr: 'BRA', color: '#009C3B', tc: '#FFDF00' },
+    },
+    uruguay: {
+      csv: ['Uruguay'],
+      espn: ['Uruguay'],
+      apifootball: ['Uruguay'],
+      bsd: ['Uruguay'],
+      footballdata: ['Uruguay'],
+      display: { name: 'Uruguay', short: 'Uruguay', abbr: 'URU', color: '#0038A8', tc: '#fff' },
+    },
+    colombia: {
+      csv: ['Colombia'],
+      espn: ['Colombia'],
+      apifootball: ['Colombia'],
+      bsd: ['Colombia'],
+      footballdata: ['Colombia'],
+      display: { name: 'Colombia', short: 'Colombia', abbr: 'COL', color: '#FCD116', tc: '#1a202c' },
+    },
+    chile: {
+      csv: ['Chile'],
+      espn: ['Chile'],
+      apifootball: ['Chile'],
+      bsd: ['Chile'],
+      footballdata: ['Chile'],
+      display: { name: 'Chile', short: 'Chile', abbr: 'CHI', color: '#0039A6', tc: '#fff' },
+    },
+    ecuador: {
+      csv: ['Ecuador'],
+      espn: ['Ecuador'],
+      apifootball: ['Ecuador'],
+      bsd: ['Ecuador'],
+      footballdata: ['Ecuador'],
+      display: { name: 'Ecuador', short: 'Ecuador', abbr: 'ECU', color: '#FFDD00', tc: '#1a202c' },
+    },
+    // UEFA teams (major teams)
+    spain: {
+      csv: ['Spain', 'España'],
+      espn: ['Spain', 'España'],
+      apifootball: ['Spain'],
+      bsd: ['Spain'],
+      footballdata: ['Spain'],
+      display: { name: 'Spain', short: 'Spain', abbr: 'ESP', color: '#AA151B', tc: '#fff' },
+    },
+    germany: {
+      csv: ['Germany', 'Deutschland'],
+      espn: ['Germany', 'Deutschland'],
+      apifootball: ['Germany'],
+      bsd: ['Germany'],
+      footballdata: ['Germany'],
+      display: { name: 'Germany', short: 'Germany', abbr: 'GER', color: '#000000', tc: '#fff' },
+    },
+    france: {
+      csv: ['France'],
+      espn: ['France'],
+      apifootball: ['France'],
+      bsd: ['France'],
+      footballdata: ['France'],
+      display: { name: 'France', short: 'France', abbr: 'FRA', color: '#0055A4', tc: '#fff' },
+    },
+    england: {
+      csv: ['England'],
+      espn: ['England'],
+      apifootball: ['England'],
+      bsd: ['England'],
+      footballdata: ['England'],
+      display: { name: 'England', short: 'England', abbr: 'ENG', color: '#FFFFFF', tc: '#1a202c' },
+    },
+    portugal: {
+      csv: ['Portugal'],
+      espn: ['Portugal'],
+      apifootball: ['Portugal'],
+      bsd: ['Portugal'],
+      footballdata: ['Portugal'],
+      display: { name: 'Portugal', short: 'Portugal', abbr: 'POR', color: '#FF0000', tc: '#fff' },
+    },
+    italy: {
+      csv: ['Italy', 'Italia'],
+      espn: ['Italy', 'Italia'],
+      apifootball: ['Italy'],
+      bsd: ['Italy'],
+      footballdata: ['Italy'],
+      display: { name: 'Italy', short: 'Italy', abbr: 'ITA', color: '#0066CC', tc: '#fff' },
+    },
+    netherlands: {
+      csv: ['Netherlands', 'Holland'],
+      espn: ['Netherlands', 'Holland'],
+      apifootball: ['Netherlands'],
+      bsd: ['Netherlands'],
+      footballdata: ['Netherlands'],
+      display: { name: 'Netherlands', short: 'Netherlands', abbr: 'NED', color: '#FF4F00', tc: '#fff' },
+    },
+    belgium: {
+      csv: ['Belgium', 'België', 'Belgique'],
+      espn: ['Belgium'],
+      apifootball: ['Belgium'],
+      bsd: ['Belgium'],
+      footballdata: ['Belgium'],
+      display: { name: 'Belgium', short: 'Belgium', abbr: 'BEL', color: '#000000', tc: '#FFCE00' },
+    },
+    // AFC teams
+    japan: {
+      csv: ['Japan', '日本'],
+      espn: ['Japan', '日本'],
+      apifootball: ['Japan'],
+      bsd: ['Japan'],
+      footballdata: ['Japan'],
+      display: { name: 'Japan', short: 'Japan', abbr: 'JPN', color: '#BC002D', tc: '#fff' },
+    },
+    south_korea: {
+      csv: ['South Korea', 'Korea Republic'],
+      espn: ['South Korea', 'Korea Republic'],
+      apifootball: ['South Korea'],
+      bsd: ['South Korea'],
+      footballdata: ['South Korea'],
+      display: { name: 'South Korea', short: 'S. Korea', abbr: 'KOR', color: '#CD2E3A', tc: '#fff' },
+    },
+    // CAF teams
+    morocco: {
+      csv: ['Morocco', 'Maroc'],
+      espn: ['Morocco', 'Maroc'],
+      apifootball: ['Morocco'],
+      bsd: ['Morocco'],
+      footballdata: ['Morocco'],
+      display: { name: 'Morocco', short: 'Morocco', abbr: 'MAR', color: '#C1272D', tc: '#fff' },
+    },
+    senegal: {
+      csv: ['Senegal', 'Sénégal'],
+      espn: ['Senegal', 'Sénégal'],
+      apifootball: ['Senegal'],
+      bsd: ['Senegal'],
+      footballdata: ['Senegal'],
+      display: { name: 'Senegal', short: 'Senegal', abbr: 'SEN', color: '#00853F', tc: '#fff' },
+    },
+    // Additional qualified teams will be added as qualifying progresses
+    // The 2026 World Cup will have 48 teams total
+  },
+  defaultHome: 'mexico',
+  defaultAway: 'argentina',
+  dataFile: 'world-cup-data.js',
+};

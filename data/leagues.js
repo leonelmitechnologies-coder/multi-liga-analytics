@@ -7,4 +7,5 @@ var LEAGUES = {
   'champions-league':{ name: 'Champions League', icon: 'UCL', file: 'champions-league-data.js' },
   'mls':             { name: 'MLS',              icon: 'US', file: 'mls-data.js' },
   'concacaf-champions':{ name: 'Concacaf Champions Cup', icon: 'CC', file: 'concacaf-champions-data.js' },
+  'world-cup':        { name: 'World Cup 2026',    icon: 'WC', file: 'world-cup-data.js' },
 };
